@@ -877,6 +877,7 @@ function getFilteredCalls() {
 
 function callCardHtml(c) {
   const statusFlow = { '미처리': '처리중', '처리중': '완료', '완료': '미처리' };
+  const nextStatus = statusFlow[c.status] || '미처리';
   return `
     <div class="call-card">
       <div class="call-status-dot dot-${c.status}"></div>
@@ -888,7 +889,7 @@ function callCardHtml(c) {
       </div>
       <div class="call-actions">
         ${getDeadlineBadge(c.deadline)}
-        <button class="btn-status" onclick="changeStatus(${c.id}, '${statusFlow[c.status]}')">→ ${statusFlow[c.status]}</button>
+        <button class="btn-status" onclick="changeStatus(${c.id}, '${nextStatus}')">→ ${nextStatus}</button>
         <button class="btn-delete" onclick="deleteCall(${c.id})">삭제</button>
       </div>
     </div>`;
