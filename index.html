@@ -878,7 +878,7 @@ function callCardHtml(c) {
   const statusFlow = { '미처리': '처리중', '처리중': '완료', '완료': '미처리' };
   const nextStatus = statusFlow[c.status] || '미처리';
   return `
-    <div class="call-card">
+    <div class="call-card" id="card-${c.id}">
       <div class="call-status-dot dot-${c.status}"></div>
       <div class="call-info">
         <div class="call-caller">${c.caller}${c.phone ? ` <span style="color:var(--text-muted);font-weight:400;font-size:0.85rem">${c.phone}</span>` : ''}</div>
@@ -889,9 +889,67 @@ function callCardHtml(c) {
       <div class="call-actions">
         ${getDeadlineBadge(c.deadline)}
         <button class="btn-status" onclick="changeStatus(${c.id}, '${nextStatus}')">→ ${nextStatus}</button>
+        <button class="btn-status" onclick="editCall(${c.id})" style="color:var(--blue);border-color:var(--blue)">✏️ 편집</button>
         <button class="btn-delete" onclick="deleteCall(${c.id})">삭제</button>
       </div>
     </div>`;
+}
+
+function editCall(id) {
+  const c = calls.find(c => c.id === id);
+  if (!c) return;
+  const card = document.getElementById('card-' + id);
+  card.innerHTML = `
+    <div style="width:100%">
+      <div style="font-size:0.8rem;font-weight:700;color:var(--blue);margin-bottom:10px">✏️ 편집 중</div>
+      <div class="form-grid" style="margin-bottom:10px">
+        <div class="form-group">
+          <label>발신자 / 업체명</label>
+          <input type="text" id="edit-caller-${id}" value="${c.caller}" />
+        </div>
+        <div class="form-group">
+          <label>연락처</label>
+          <input type="text" id="edit-phone-${id}" value="${c.phone || ''}" />
+        </div>
+        <div class="form-group full">
+          <label>통화 내용</label>
+          <input type="text" id="edit-content-${id}" value="${c.content || ''}" />
+        </div>
+        <div class="form-group full">
+          <label>할 일</label>
+          <input type="text" id="edit-todo-${id}" value="${c.todo || ''}" />
+        </div>
+        <div class="form-group">
+          <label>기한</label>
+          <input type="date" id="edit-deadline-${id}" value="${c.deadline || ''}" />
+        </div>
+        <div class="form-group">
+          <label>상태</label>
+          <select id="edit-status-${id}">
+            <option value="미처리" ${c.status==='미처리'?'selected':''}>🔴 미처리</option>
+            <option value="처리중" ${c.status==='처리중'?'selected':''}>🟠 처리중</option>
+            <option value="완료"   ${c.status==='완료'?'selected':''}>🟢 완료</option>
+          </select>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px">
+        <button class="btn-add" onclick="saveEdit(${id})" style="margin-top:0;padding:8px 20px">💾 저장</button>
+        <button onclick="renderCalls()" style="padding:8px 16px;border:1px solid var(--border);border-radius:8px;background:white;cursor:pointer;font-size:0.88rem">취소</button>
+      </div>
+    </div>`;
+}
+
+function saveEdit(id) {
+  const c = calls.find(c => c.id === id);
+  if (!c) return;
+  c.caller   = document.getElementById(`edit-caller-${id}`).value.trim() || c.caller;
+  c.phone    = document.getElementById(`edit-phone-${id}`).value.trim();
+  c.content  = document.getElementById(`edit-content-${id}`).value.trim();
+  c.todo     = document.getElementById(`edit-todo-${id}`).value.trim();
+  c.deadline = document.getElementById(`edit-deadline-${id}`).value;
+  c.status   = document.getElementById(`edit-status-${id}`).value;
+  saveCalls();
+  renderCalls();
 }
 
 function sortCalls(arr) {
