@@ -1,0 +1,869 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>업무 노트 — 미디어메이트</title>
+<style>
+  :root {
+    --blue: #2563eb;
+    --blue-light: #eff6ff;
+    --green: #16a34a;
+    --green-light: #f0fdf4;
+    --orange: #ea580c;
+    --orange-light: #fff7ed;
+    --red: #dc2626;
+    --red-light: #fef2f2;
+    --gray: #6b7280;
+    --gray-light: #f9fafb;
+    --border: #e5e7eb;
+    --text: #111827;
+    --text-muted: #6b7280;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    color: var(--text);
+    background: #f3f4f6;
+    line-height: 1.6;
+  }
+  .container { max-width: 960px; margin: 0 auto; padding: 32px 20px; }
+
+  /* 페이지 제목 */
+  .page-header {
+    background: white;
+    border-radius: 16px;
+    padding: 32px;
+    margin-bottom: 24px;
+    border: 1px solid var(--border);
+  }
+  .page-header h1 { font-size: 2rem; font-weight: 700; color: var(--text); }
+  .page-header p { color: var(--text-muted); margin-top: 6px; }
+
+  /* 탭 네비게이션 */
+  .tabs {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+  }
+  .tab-btn {
+    padding: 10px 20px;
+    border-radius: 10px;
+    border: 2px solid var(--border);
+    background: white;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+    color: var(--text-muted);
+  }
+  .tab-btn.active {
+    background: var(--blue);
+    border-color: var(--blue);
+    color: white;
+  }
+  .tab-btn:hover:not(.active) {
+    border-color: var(--blue);
+    color: var(--blue);
+  }
+
+  /* 섹션 카드 */
+  .section {
+    background: white;
+    border-radius: 16px;
+    border: 1px solid var(--border);
+    margin-bottom: 20px;
+    overflow: hidden;
+    display: none;
+  }
+  .section.active { display: block; }
+  .section-header {
+    padding: 18px 24px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .section-header h2 { font-size: 1.1rem; font-weight: 700; }
+  .section-body { padding: 24px; }
+  .emoji { font-size: 1.3rem; }
+
+  /* 📞 전화 메모 폼 */
+  .call-form {
+    background: var(--blue-light);
+    border: 2px solid var(--blue);
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 24px;
+  }
+  .call-form h3 { color: var(--blue); font-size: 1rem; margin-bottom: 14px; }
+  .form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+  .form-group { display: flex; flex-direction: column; gap: 4px; }
+  .form-group label { font-size: 0.8rem; font-weight: 600; color: var(--text-muted); }
+  .form-group input,
+  .form-group select,
+  .form-group textarea {
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 8px 12px;
+    font-size: 0.9rem;
+    background: white;
+    outline: none;
+    transition: border 0.15s;
+    font-family: inherit;
+  }
+  .form-group input:focus,
+  .form-group select:focus,
+  .form-group textarea:focus {
+    border-color: var(--blue);
+  }
+  .form-group.full { grid-column: 1 / -1; }
+  .form-group textarea { height: 80px; resize: vertical; }
+  .btn-add {
+    background: var(--blue);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 10px 24px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    margin-top: 12px;
+    transition: background 0.15s;
+  }
+  .btn-add:hover { background: #1d4ed8; }
+
+  /* 전화 메모 리스트 */
+  .call-filters {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+  }
+  .filter-btn {
+    padding: 5px 14px;
+    border-radius: 20px;
+    border: 1px solid var(--border);
+    background: white;
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    color: var(--text-muted);
+    transition: all 0.15s;
+  }
+  .filter-btn.active, .filter-btn:hover {
+    background: var(--text);
+    color: white;
+    border-color: var(--text);
+  }
+  .call-list { display: flex; flex-direction: column; gap: 10px; }
+  .call-card {
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px 16px;
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    gap: 12px;
+    align-items: start;
+    transition: box-shadow 0.15s;
+  }
+  .call-card:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+  .call-status-dot {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    margin-top: 5px;
+    flex-shrink: 0;
+  }
+  .dot-미처리 { background: var(--red); }
+  .dot-처리중 { background: var(--orange); }
+  .dot-완료 { background: var(--green); }
+  .call-info {}
+  .call-caller { font-weight: 700; font-size: 0.95rem; }
+  .call-todo { color: var(--text-muted); font-size: 0.85rem; margin-top: 2px; }
+  .call-date { font-size: 0.75rem; color: var(--text-muted); margin-top: 4px; }
+  .call-deadline-badge {
+    font-size: 0.75rem;
+    padding: 2px 8px;
+    border-radius: 6px;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  .badge-urgent { background: var(--red-light); color: var(--red); }
+  .badge-today { background: var(--orange-light); color: var(--orange); }
+  .badge-ok { background: var(--green-light); color: var(--green); }
+  .badge-none { background: var(--gray-light); color: var(--gray); }
+  .call-actions { display: flex; gap: 6px; flex-direction: column; align-items: flex-end; }
+  .btn-status {
+    font-size: 0.75rem;
+    padding: 3px 10px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: white;
+    cursor: pointer;
+    font-weight: 600;
+    color: var(--text-muted);
+    transition: all 0.15s;
+  }
+  .btn-status:hover { background: var(--gray-light); }
+  .btn-delete { color: var(--red); font-size: 0.75rem; border: none; background: none; cursor: pointer; }
+  .empty-state {
+    text-align: center;
+    padding: 40px;
+    color: var(--text-muted);
+    font-size: 0.9rem;
+  }
+
+  /* ✅ 데일리 루틴 */
+  .routine-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+  .routine-table th {
+    background: var(--gray-light);
+    padding: 10px 12px;
+    text-align: center;
+    font-weight: 700;
+    border: 1px solid var(--border);
+    font-size: 0.8rem;
+    color: var(--text-muted);
+  }
+  .routine-table th:first-child { text-align: left; }
+  .routine-table td {
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+    text-align: center;
+    vertical-align: middle;
+  }
+  .routine-table td:first-child { text-align: left; font-weight: 500; }
+  .routine-table tr:hover td { background: var(--blue-light); }
+  .check-box {
+    width: 22px; height: 22px;
+    border: 2px solid var(--border);
+    border-radius: 5px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    transition: all 0.15s;
+    background: white;
+    user-select: none;
+  }
+  .check-box.checked {
+    background: var(--green);
+    border-color: var(--green);
+    color: white;
+  }
+  .today-col { background: #fffbeb !important; }
+
+  /* 📝 회의록 */
+  .meeting-list { display: flex; flex-direction: column; gap: 12px; }
+  .meeting-card {
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+  }
+  .meeting-date-header {
+    background: var(--gray-light);
+    padding: 10px 16px;
+    font-weight: 700;
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .meeting-items { padding: 12px 16px; }
+  .meeting-item {
+    padding: 6px 0;
+    font-size: 0.9rem;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+  }
+  .meeting-item:last-child { border-bottom: none; }
+  .meeting-item::before { content: "·"; color: var(--text-muted); flex-shrink: 0; }
+
+  /* 💬 문자 템플릿 */
+  .template-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .template-card {
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+  }
+  .template-header {
+    background: var(--gray-light);
+    padding: 10px 14px;
+    font-weight: 700;
+    font-size: 0.85rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .template-body {
+    padding: 12px 14px;
+    font-size: 0.82rem;
+    line-height: 1.7;
+    color: var(--text);
+    white-space: pre-wrap;
+    max-height: 180px;
+    overflow-y: auto;
+  }
+  .btn-copy {
+    font-size: 0.75rem;
+    padding: 3px 10px;
+    border-radius: 5px;
+    border: 1px solid var(--border);
+    background: white;
+    cursor: pointer;
+    font-weight: 600;
+    color: var(--blue);
+    transition: all 0.15s;
+  }
+  .btn-copy:hover { background: var(--blue); color: white; }
+  .btn-copy.copied { background: var(--green); color: white; border-color: var(--green); }
+
+  /* 📦 제품/설치 정보 */
+  .info-section { margin-bottom: 20px; }
+  .info-section h3 {
+    font-size: 0.95rem;
+    font-weight: 700;
+    margin-bottom: 10px;
+    padding-bottom: 6px;
+    border-bottom: 2px solid var(--blue);
+    color: var(--blue);
+  }
+  .info-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+  .info-table th {
+    background: var(--blue-light);
+    padding: 8px 12px;
+    text-align: left;
+    font-weight: 700;
+    border: 1px solid var(--border);
+    font-size: 0.8rem;
+  }
+  .info-table td {
+    padding: 8px 12px;
+    border: 1px solid var(--border);
+  }
+  .info-table tr:nth-child(even) td { background: var(--gray-light); }
+  .callout-box {
+    background: var(--orange-light);
+    border-left: 4px solid var(--orange);
+    border-radius: 0 8px 8px 0;
+    padding: 12px 16px;
+    font-size: 0.85rem;
+    margin-bottom: 12px;
+  }
+  .callout-box strong { color: var(--orange); }
+
+  /* 🔑 계정 정보 */
+  .account-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .account-card {
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px;
+    background: var(--gray-light);
+  }
+  .account-card h4 { font-size: 0.85rem; font-weight: 700; margin-bottom: 8px; color: var(--text-muted); }
+  .account-row { display: flex; justify-content: space-between; font-size: 0.85rem; margin-bottom: 4px; }
+  .account-row span:first-child { color: var(--text-muted); }
+  .account-row span:last-child { font-weight: 600; font-family: monospace; }
+  .warning-badge {
+    display: inline-block;
+    background: var(--red-light);
+    color: var(--red);
+    font-size: 0.7rem;
+    padding: 1px 6px;
+    border-radius: 4px;
+    font-weight: 700;
+    margin-left: 6px;
+  }
+
+  @media (max-width: 640px) {
+    .form-grid { grid-template-columns: 1fr; }
+    .template-grid { grid-template-columns: 1fr; }
+    .account-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <!-- 페이지 헤더 -->
+  <div class="page-header">
+    <h1>📋 업무 노트</h1>
+    <p>미디어메이트 · 류경준 | 전화 메모, 루틴, 회의록, 템플릿, 제품 정보</p>
+  </div>
+
+  <!-- 탭 -->
+  <div class="tabs">
+    <button class="tab-btn active" onclick="switchTab('calls')">📞 전화 메모</button>
+    <button class="tab-btn" onclick="switchTab('routine')">✅ 데일리 루틴</button>
+    <button class="tab-btn" onclick="switchTab('meeting')">📝 회의록</button>
+    <button class="tab-btn" onclick="switchTab('templates')">💬 문자 템플릿</button>
+    <button class="tab-btn" onclick="switchTab('products')">📦 제품·설치 정보</button>
+    <button class="tab-btn" onclick="switchTab('accounts')">🔑 계정 정보</button>
+  </div>
+
+  <!-- ===== 📞 전화 메모 ===== -->
+  <div class="section active" id="tab-calls">
+    <div class="section-header">
+      <span class="emoji">📞</span>
+      <h2>전화 메모</h2>
+    </div>
+    <div class="section-body">
+
+      <!-- 입력 폼 -->
+      <div class="call-form">
+        <h3>⚡ 전화 끊고 바로 기록</h3>
+        <div class="form-grid">
+          <div class="form-group">
+            <label>발신자 / 업체명</label>
+            <input type="text" id="in-caller" placeholder="예: 우리디스플레이 박팀장" />
+          </div>
+          <div class="form-group">
+            <label>연락처</label>
+            <input type="text" id="in-phone" placeholder="010-0000-0000" />
+          </div>
+          <div class="form-group full">
+            <label>통화 내용 요약</label>
+            <input type="text" id="in-content" placeholder="예: 43인치 사이니지 견적 요청" />
+          </div>
+          <div class="form-group full">
+            <label>할 일 (Action Item)</label>
+            <input type="text" id="in-todo" placeholder="예: 견적서 작성 후 메일 발송" />
+          </div>
+          <div class="form-group">
+            <label>기한</label>
+            <input type="date" id="in-deadline" />
+          </div>
+          <div class="form-group">
+            <label>상태</label>
+            <select id="in-status">
+              <option value="미처리">🔴 미처리</option>
+              <option value="처리중">🟠 처리중</option>
+              <option value="완료">🟢 완료</option>
+            </select>
+          </div>
+        </div>
+        <button class="btn-add" onclick="addCall()">+ 메모 추가</button>
+      </div>
+
+      <!-- 필터 -->
+      <div class="call-filters">
+        <button class="filter-btn active" onclick="filterCalls('전체', this)">전체</button>
+        <button class="filter-btn" onclick="filterCalls('미처리', this)">🔴 미처리</button>
+        <button class="filter-btn" onclick="filterCalls('처리중', this)">🟠 처리중</button>
+        <button class="filter-btn" onclick="filterCalls('완료', this)">🟢 완료</button>
+      </div>
+
+      <!-- 메모 리스트 -->
+      <div class="call-list" id="call-list">
+        <!-- 샘플 데이터 -->
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== ✅ 데일리 루틴 ===== -->
+  <div class="section" id="tab-routine">
+    <div class="section-header">
+      <span class="emoji">✅</span>
+      <h2>데일리 루틴 업무</h2>
+    </div>
+    <div class="section-body">
+      <table class="routine-table">
+        <thead>
+          <tr>
+            <th>업무</th>
+            <th id="col-sun">일</th>
+            <th id="col-mon">월</th>
+            <th id="col-tue">화</th>
+            <th id="col-wed">수</th>
+            <th id="col-thu">목</th>
+            <th id="col-fri">금</th>
+            <th id="col-sat">토</th>
+          </tr>
+        </thead>
+        <tbody id="routine-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ===== 📝 회의록 ===== -->
+  <div class="section" id="tab-meeting">
+    <div class="section-header">
+      <span class="emoji">📝</span>
+      <h2>회의록 / 업무 일지</h2>
+    </div>
+    <div class="section-body">
+      <div class="meeting-list" id="meeting-list"></div>
+    </div>
+  </div>
+
+  <!-- ===== 💬 문자 템플릿 ===== -->
+  <div class="section" id="tab-templates">
+    <div class="section-header">
+      <span class="emoji">💬</span>
+      <h2>고객 응대 문자 템플릿</h2>
+    </div>
+    <div class="section-body">
+      <div class="template-grid" id="template-grid"></div>
+    </div>
+  </div>
+
+  <!-- ===== 📦 제품·설치 정보 ===== -->
+  <div class="section" id="tab-products">
+    <div class="section-header">
+      <span class="emoji">📦</span>
+      <h2>제품 · 설치 정보</h2>
+    </div>
+    <div class="section-body">
+
+      <div class="info-section">
+        <h3>📺 사이니지 영상 설정</h3>
+        <div class="callout-box">
+          <strong>⚠️ 영상 문제 발생 시:</strong> mp4 / bitrate 10,000 / 해상도 1080×1920
+        </div>
+      </div>
+
+      <div class="info-section">
+        <h3>🔧 브라켓 뎁스 정보</h3>
+        <table class="info-table">
+          <thead><tr><th>제품</th><th>뎁스</th><th>비고</th></tr></thead>
+          <tbody>
+            <tr><td>OLW480</td><td>브라켓 23mm + 가이드스페이스 27mm</td><td></td></tr>
+            <tr><td>65" 벽걸이 설치</td><td>평균 100mm (제품+브라켓 50mm)</td><td>자재보강 18mm 합판 18T</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="info-section">
+        <h3>📐 전자칠판 65인치 설치 타공 사이즈</h3>
+        <table class="info-table">
+          <thead><tr><th>브라켓 타입</th><th>여유 (상하좌우)</th><th>뎁스</th></tr></thead>
+          <tbody>
+            <tr><td>고정형</td><td>50mm</td><td>80~85mm</td></tr>
+            <tr><td>매립형 (자바라)</td><td>5~10mm</td><td>100~110mm</td></tr>
+            <tr><td>매립형 (PUSH) ⭐추천</td><td>10mm</td><td>130mm</td></tr>
+          </tbody>
+        </table>
+        <div class="callout-box" style="margin-top:10px">
+          <strong>단품 벽걸이 매립 설치시:</strong> 타공할 때 상/하/좌/우 각각 10mm씩 여유
+        </div>
+      </div>
+
+      <div class="info-section">
+        <h3>🏷️ 비테크 코리아 팝업브라켓 매입가</h3>
+        <table class="info-table">
+          <thead><tr><th>모델</th><th>매입가</th><th>호환 제품</th></tr></thead>
+          <tbody>
+            <tr><td>BT8301</td><td>176,000원</td><td></td></tr>
+            <tr><td>BT8309</td><td>165,000원</td><td>86BH5F (2ea 필요)</td></tr>
+            <tr><td><strong>BT8310 ★</strong></td><td><strong>253,000원</strong></td><td>75", 86UH5F</td></tr>
+            <tr><td>BT8310XL</td><td>550,000원</td><td>98UH5F, 98TR3PJ</td></tr>
+            <tr><td>BT8312</td><td>231,000원</td><td></td></tr>
+            <tr><td>BT9921</td><td>780,000원</td><td></td></tr>
+            <tr><td>BT9922</td><td>1,860,000원</td><td>별도</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="info-section">
+        <h3>🏢 주소 정보</h3>
+        <table class="info-table">
+          <thead><tr><th>장소</th><th>주소</th></tr></thead>
+          <tbody>
+            <tr><td>광주 창고</td><td>경기도 광주시 이선리 545-7 / 경기 광주시 외선길 71-2</td></tr>
+            <tr><td>목동 사무실</td><td>서울 양천구 목동로23길 1</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="info-section">
+        <h3>📊 장려금 정보</h3>
+        <table class="info-table">
+          <thead><tr><th>구분</th><th>내용</th></tr></thead>
+          <tbody>
+            <tr><td>사이니지 안전재고</td><td>2억 2%</td></tr>
+            <tr><td>KR009985001B</td><td>장려금 챔피언점 5.5%</td></tr>
+            <tr><td>설치정산 거래처코드</td><td>KR009398045B</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="info-section">
+        <h3>💡 EP 품의 요청 시 필수 항목</h3>
+        <table class="info-table">
+          <thead><tr><th>항목</th><th>내용</th></tr></thead>
+          <tbody>
+            <tr><td>납품구조</td><td>Ex. LG전자 → 미디어메이트 → 중간발주처 → 최종수요처</td></tr>
+            <tr><td>구매형태</td><td>수의계약 / 입찰(최저가 or 제안)</td></tr>
+            <tr><td>제안입찰이라면</td><td>어떤 부분으로 스펙인 됐는지</td></tr>
+            <tr><td>타임테이블</td><td>사전규격공고 → 본입찰 → 납품 시점</td></tr>
+            <tr><td>경쟁상황</td><td>수요처가 고려 중인 제조사 (삼성, LG, 중소사 등)</td></tr>
+            <tr><td>예산 규모</td><td>총 예산 / 그 중 디스플레이 예산 (설치비 포함)</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="info-section">
+        <h3>📱 24년 vs 25년 모델 비교 멘트</h3>
+        <div class="callout-box">
+          24년도 모델은 CPU 성능이 높아 전반적인 반응 속도가 빠르고, 25년도 모델은 OS 버전이 상향되면서 AI 기능 등 다양한 신규 기능이 추가되었습니다.<br>
+          👉 성능·속도 중시 → 24년 / 최신 기능·향후 활용성 중시 → 25년
+        </div>
+      </div>
+
+      <div class="info-section">
+        <h3>🔩 벽걸이 설치 형태별 차이</h3>
+        <table class="info-table">
+          <thead><tr><th>타입</th><th>특징</th><th>추천 상황</th></tr></thead>
+          <tbody>
+            <tr><td>✅ 고정형</td><td>벽에 단단히 고정, 움직이지 않음</td><td>일반 평평한 벽면</td></tr>
+            <tr><td>✅ 매립형 (자바라)</td><td>앞뒤 이동 및 좌우 미세 각도 조절</td><td>⚠️ 전자칠판엔 비추</td></tr>
+            <tr><td>✅ 매립형 (PUSH)</td><td>누르면 앞으로 튀어나오는 스프링 방식</td><td>매립 설치 시 가장 추천</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ===== 🔑 계정 정보 ===== -->
+  <div class="section" id="tab-accounts">
+    <div class="section-header">
+      <span class="emoji">🔑</span>
+      <h2>계정 / 거래처 정보</h2>
+    </div>
+    <div class="section-body">
+      <div class="callout-box" style="margin-bottom:20px">
+        <strong>⚠️ 보안 주의:</strong> 이 페이지는 본인만 열람하세요. 공유 금지.
+      </div>
+      <div class="account-grid">
+        <div class="account-card">
+          <h4>🏦 신한은행 (미디어메이트)</h4>
+          <div class="account-row"><span>ID</span><span>mediadp1</span></div>
+          <div class="account-row"><span>PW</span><span>lcd6425!! <span class="warning-badge">변경 권장</span></span></div>
+        </div>
+        <div class="account-card">
+          <h4>🖥️ 이카운트 ERP</h4>
+          <div class="account-row"><span>ID</span><span>류경준</span></div>
+          <div class="account-row"><span>PW</span><span>lcd6425612! <span class="warning-badge">변경 권장</span></span></div>
+        </div>
+        <div class="account-card">
+          <h4>🏆 대표님 BEST</h4>
+          <div class="account-row"><span>ID</span><span>C29130</span></div>
+          <div class="account-row"><span>PW</span><span>media67331</span></div>
+        </div>
+        <div class="account-card">
+          <h4>📦 BEST 거래처 (LX)</h4>
+          <div class="account-row"><span>담당자</span><span>조준호 책임</span></div>
+        </div>
+        <div class="account-card">
+          <h4>👥 팀 인턴</h4>
+          <div class="account-row"><span>인천팀</span><span>안정은</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ===== 탭 전환 =====
+function switchTab(tab) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-' + tab).classList.add('active');
+  event.target.classList.add('active');
+}
+
+// ===== 전화 메모 데이터 =====
+let calls = JSON.parse(localStorage.getItem('calls') || '[]');
+// 샘플 데이터 (처음 한 번만)
+if (calls.length === 0) {
+  calls = [
+    { id: 1, caller: '우리디스플레이', phone: '', content: '43" 사이니지 주문', todo: '견적서 발송', deadline: '', status: '완료', date: '2024-02-19' },
+    { id: 2, caller: '판토스 신명섭', phone: '', content: '스탠드 요청', todo: '스탠드 재고 확인 후 회신', deadline: '', status: '미처리', date: '2024-02-19' },
+    { id: 3, caller: '에이텍씨앤 엄준용', phone: '', content: '설치 일정 조율', todo: '설치팀과 날짜 확정', deadline: '', status: '처리중', date: '2024-02-19' },
+  ];
+}
+
+let currentFilter = '전체';
+
+function saveCalls() { localStorage.setItem('calls', JSON.stringify(calls)); }
+
+function addCall() {
+  const caller = document.getElementById('in-caller').value.trim();
+  if (!caller) { alert('발신자를 입력하세요!'); return; }
+  const now = new Date();
+  const dateStr = now.toISOString().split('T')[0];
+  calls.unshift({
+    id: Date.now(),
+    caller,
+    phone: document.getElementById('in-phone').value.trim(),
+    content: document.getElementById('in-content').value.trim(),
+    todo: document.getElementById('in-todo').value.trim(),
+    deadline: document.getElementById('in-deadline').value,
+    status: document.getElementById('in-status').value,
+    date: dateStr,
+  });
+  saveCalls();
+  ['in-caller','in-phone','in-content','in-todo','in-deadline'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('in-status').value = '미처리';
+  renderCalls();
+}
+
+function filterCalls(filter, btn) {
+  currentFilter = filter;
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderCalls();
+}
+
+function getDeadlineBadge(deadline) {
+  if (!deadline) return '<span class="call-deadline-badge badge-none">기한 없음</span>';
+  const today = new Date(); today.setHours(0,0,0,0);
+  const d = new Date(deadline);
+  const diff = Math.floor((d - today) / 86400000);
+  if (diff < 0) return `<span class="call-deadline-badge badge-urgent">D+${Math.abs(diff)} 초과</span>`;
+  if (diff === 0) return `<span class="call-deadline-badge badge-today">오늘 마감</span>`;
+  if (diff <= 3) return `<span class="call-deadline-badge badge-today">D-${diff}</span>`;
+  return `<span class="call-deadline-badge badge-ok">D-${diff}</span>`;
+}
+
+function changeStatus(id, next) {
+  const c = calls.find(c => c.id === id);
+  if (c) { c.status = next; saveCalls(); renderCalls(); }
+}
+function deleteCall(id) {
+  if (!confirm('삭제하시겠어요?')) return;
+  calls = calls.filter(c => c.id !== id);
+  saveCalls(); renderCalls();
+}
+
+function renderCalls() {
+  const list = document.getElementById('call-list');
+  const filtered = currentFilter === '전체' ? calls : calls.filter(c => c.status === currentFilter);
+  if (filtered.length === 0) {
+    list.innerHTML = '<div class="empty-state">📭 메모가 없어요. 전화 오면 바로 기록해보세요!</div>';
+    return;
+  }
+  const statusFlow = { '미처리': '처리중', '처리중': '완료', '완료': '미처리' };
+  list.innerHTML = filtered.map(c => `
+    <div class="call-card">
+      <div class="call-status-dot dot-${c.status}"></div>
+      <div class="call-info">
+        <div class="call-caller">${c.caller}${c.phone ? ` <span style="color:var(--text-muted);font-weight:400;font-size:0.85rem">${c.phone}</span>` : ''}</div>
+        ${c.content ? `<div class="call-todo" style="margin-top:4px">${c.content}</div>` : ''}
+        ${c.todo ? `<div class="call-todo">→ ${c.todo}</div>` : ''}
+        <div class="call-date">${c.date} · ${c.status}</div>
+      </div>
+      <div class="call-actions">
+        ${getDeadlineBadge(c.deadline)}
+        <button class="btn-status" onclick="changeStatus(${c.id}, '${statusFlow[c.status]}')">→ ${statusFlow[c.status]}</button>
+        <button class="btn-delete" onclick="deleteCall(${c.id})">삭제</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+// ===== 데일리 루틴 =====
+const routineTasks = ['온라인 주문수집', '사이니지 재고 업데이트'];
+const days = ['sun','mon','tue','wed','thu','fri','sat'];
+const dayNames = { sun:'일', mon:'월', tue:'화', wed:'수', thu:'목', fri:'금', sat:'토' };
+let routineData = JSON.parse(localStorage.getItem('routine') || '{}');
+const todayDay = days[new Date().getDay()];
+
+function renderRoutine() {
+  // 오늘 열 강조
+  days.forEach(d => {
+    const el = document.getElementById('col-' + d);
+    if (el) el.style.background = d === todayDay ? '#fffbeb' : '';
+  });
+  const tbody = document.getElementById('routine-tbody');
+  tbody.innerHTML = routineTasks.map(task => `
+    <tr>
+      <td>${task}</td>
+      ${days.map(d => {
+        const key = task + '_' + d;
+        const checked = routineData[key];
+        return `<td class="${d === todayDay ? 'today-col' : ''}">
+          <div class="check-box ${checked ? 'checked' : ''}" onclick="toggleRoutine('${key}', this)">
+            ${checked ? '✓' : ''}
+          </div>
+        </td>`;
+      }).join('')}
+    </tr>
+  `).join('');
+}
+function toggleRoutine(key, el) {
+  routineData[key] = !routineData[key];
+  localStorage.setItem('routine', JSON.stringify(routineData));
+  el.classList.toggle('checked');
+  el.textContent = routineData[key] ? '✓' : '';
+}
+
+// ===== 회의록 =====
+const meetings = [
+  { date: '2024-02-19 (월)', items: ['우리디스플레이 43" 사이니지 주문', '이동형 스탠드 클레임 건', '포도인터내셔날 견적서', '미마 콘테스트 아이디어 제출', '그레이스솔루션 65" 주문', '후니넷 발주건', '판토스 신명섭 스탠드 요청건', '에이텍씨앤 엄준용 설치일정', '부천시청 요청서류', '010-5227-5142 65UH5N 110별도'] },
+  { date: '2024-02-20 (화)', items: ['장미아 고객 전자칠판 벽걸이', '010-3929-7494 스윙 자재'] },
+  { date: '2024-02-21 (수)', items: ['(기록 없음)'] },
+  { date: '2024-02-22 (목)', items: ['베가프로젝트코리아 스케줄', '주간보고', '노트북 나스 확인 (USB 챙기기)'] },
+  { date: '2024-02-23 (금)', items: ['전자칠판 구독 주문시 사업자등록증 확인', '사업장 소재지 주소지와 설치주소 상이 확인', 'GS리테일 제품 납품시 계산서 + 거래명세표 송부'] },
+];
+
+function renderMeetings() {
+  document.getElementById('meeting-list').innerHTML = meetings.map(m => `
+    <div class="meeting-card">
+      <div class="meeting-date-header">📅 ${m.date}</div>
+      <div class="meeting-items">
+        ${m.items.map(i => `<div class="meeting-item">${i}</div>`).join('')}
+      </div>
+    </div>
+  `).join('');
+}
+
+// ===== 문자 템플릿 =====
+const templates = [
+  { title: '📦 구독 주문 안내', body: `안녕하세요 고객님,\n방금 통화드렸던 LG전자 미디어메이트 류경준입니다.\n\n사업자등록증 1부와 함께 아래 항목을 기재하시어 회신 부탁드립니다.\n\n고객명:\n메일 주소:\n제품 설치 주소:\n\n주문이 접수되면 LG전자 계약센터에서 고객님께 연락을 드릴 예정입니다.\n계약센터 상담원과 통화 후 계약 진행을 부탁드립니다.` },
+  { title: '📸 포토리뷰 유도', body: `안녕하세요 고객님, LG전자 미디어메이트입니다.\n제품은 만족스럽게 받아보셨나요?\n\n현재 포토리뷰 이벤트 진행 중입니다.\n지금 리뷰를 작성해 주시면 신세계상품권 5만원권을 드립니다!\n\n참여 방법:\n• 별점 5점\n• 제품 사진 3장 이상\n• 간단한 사용 후기 작성\n\n많은 참여 부탁드립니다. 감사합니다` },
+  { title: '🎁 리뷰 이벤트 완료', body: `안녕하세요 고객님,\n리뷰이벤트 참여 감사드립니다.\n\n사은품은 모바일 카카오톡으로 14일 이내 발송 예정입니다.\n\n감사합니다.` },
+  { title: '⏳ 배송 지연 안내', body: `안녕하세요, 미디어메이트입니다.\n\n주문하신 상품이 현재 품절 상태로, 생산 중에 있습니다.\n입고 즉시 빠르게 배송해드리겠습니다.\n\n배송 지연으로 불편을 드려 죄송합니다.\n추가 문의사항이 있으시면 언제든지 편하게 연락 주세요.\n\n감사합니다.` },
+  { title: '📋 현장 견적 요청 양식', body: `■ 현장명 :\n■ 현장 주소 :\n■ 모델별 요청가 및 수량 :\n■ 납품 예정기간 :\n■ 단가 요청 사유 및 특이사항 :` },
+  { title: '✉️ 빠른 회신 감사', body: `Thank you for your prompt reply.\n고객이나 동료로부터 빠른 회신을 받았을 때 감사의 인사를 전합니다.\n\nIf you have any questions or concerns, don't hesitate to let me know.\n문의사항 있으시면 편하게 말씀해주세요.` },
+];
+
+function renderTemplates() {
+  document.getElementById('template-grid').innerHTML = templates.map((t, i) => `
+    <div class="template-card">
+      <div class="template-header">
+        ${t.title}
+        <button class="btn-copy" id="copy-btn-${i}" onclick="copyTemplate(${i})">복사</button>
+      </div>
+      <div class="template-body">${t.body}</div>
+    </div>
+  `).join('');
+}
+
+function copyTemplate(i) {
+  navigator.clipboard.writeText(templates[i].body).then(() => {
+    const btn = document.getElementById('copy-btn-' + i);
+    btn.textContent = '✓ 복사됨';
+    btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = '복사'; btn.classList.remove('copied'); }, 2000);
+  });
+}
+
+// 초기화
+renderCalls();
+renderRoutine();
+renderMeetings();
+renderTemplates();
+</script>
+</body>
+</html>
