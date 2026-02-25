@@ -894,9 +894,17 @@ function callCardHtml(c) {
     </div>`;
 }
 
+function sortCalls(arr) {
+  // 미처리/처리중 먼저, 완료는 맨 아래
+  return [...arr].sort((a, b) => {
+    const order = { '미처리': 0, '처리중': 1, '완료': 2 };
+    return (order[a.status] ?? 0) - (order[b.status] ?? 0);
+  });
+}
+
 function renderCalls() {
   const list = document.getElementById('call-list');
-  const filtered = getFilteredCalls();
+  const filtered = sortCalls(getFilteredCalls());
 
   if (filtered.length === 0) {
     list.innerHTML = '<div class="empty-state">📭 해당하는 메모가 없어요!</div>';
@@ -912,8 +920,8 @@ function renderCalls() {
   const groups = {};
   filtered.forEach(c => {
     const key = currentGroupBy === '월'
-      ? c.date.slice(0, 7) // YYYY-MM
-      : c.date;             // YYYY-MM-DD
+      ? c.date.slice(0, 7)
+      : c.date;
     if (!groups[key]) groups[key] = [];
     groups[key].push(c);
   });
