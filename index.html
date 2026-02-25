@@ -844,7 +844,6 @@ function changeStatus(id, next) {
   if (c) { c.status = next; saveCalls(); renderCalls(); }
 }
 function deleteCall(id) {
-  if (!confirm('삭제하시겠어요?')) return;
   calls = calls.filter(c => c.id !== id);
   saveCalls(); renderCalls();
 }
@@ -958,7 +957,6 @@ function addRoutineTask() {
 }
 
 function deleteRoutineTask(task) {
-  if (!confirm(`"${task}" 업무를 삭제하시겠어요?`)) return;
   routineTasks = routineTasks.filter(t => t !== task);
   saveRoutineTasks();
   renderRoutine();
@@ -1036,7 +1034,6 @@ function deleteMeetingItem(id, idx) {
 }
 
 function deleteMeetingDate(id) {
-  if (!confirm('이 날짜 전체를 삭제하시겠어요?')) return;
   meetings = meetings.filter(m => m.id !== id);
   saveMeetings(); renderMeetings();
 }
@@ -1092,7 +1089,6 @@ function addTemplate() {
 }
 
 function deleteTemplate(id) {
-  if (!confirm('이 템플릿을 삭제하시겠어요?')) return;
   templates = templates.filter(t => t.id !== id);
   saveTemplates();
   renderTemplates();
@@ -1138,7 +1134,6 @@ function addProductNote() {
 }
 
 function deleteProductNote(id) {
-  if (!confirm('삭제하시겠어요?')) return;
   productNotes = productNotes.filter(p => p.id !== id);
   saveProductNotes();
   renderProductNotes();
