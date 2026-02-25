@@ -500,6 +500,23 @@
       <h2>회의록 / 업무 일지</h2>
     </div>
     <div class="section-body">
+
+      <!-- 새 날짜 추가 폼 -->
+      <div class="call-form" style="margin-bottom:24px">
+        <h3>📅 새 날짜 추가</h3>
+        <div class="form-grid">
+          <div class="form-group">
+            <label>날짜</label>
+            <input type="date" id="meeting-date" />
+          </div>
+          <div class="form-group">
+            <label>첫 번째 항목</label>
+            <input type="text" id="meeting-first-item" placeholder="예: 우리디스플레이 견적 요청" />
+          </div>
+        </div>
+        <button class="btn-add" onclick="addMeetingDate()">+ 날짜 추가</button>
+      </div>
+
       <div class="meeting-list" id="meeting-list"></div>
     </div>
   </div>
@@ -511,6 +528,21 @@
       <h2>고객 응대 문자 템플릿</h2>
     </div>
     <div class="section-body">
+      <!-- 템플릿 추가 폼 -->
+      <div class="call-form" style="margin-bottom:24px">
+        <h3>➕ 새 템플릿 추가</h3>
+        <div class="form-grid">
+          <div class="form-group full">
+            <label>템플릿 제목</label>
+            <input type="text" id="tmpl-title" placeholder="예: 📞 설치 일정 안내" />
+          </div>
+          <div class="form-group full">
+            <label>문자 내용</label>
+            <textarea id="tmpl-body" style="height:100px" placeholder="문자 내용을 입력하세요..."></textarea>
+          </div>
+        </div>
+        <button class="btn-add" onclick="addTemplate()">+ 템플릿 추가</button>
+      </div>
       <div class="template-grid" id="template-grid"></div>
     </div>
   </div>
@@ -523,7 +555,26 @@
     </div>
     <div class="section-body">
 
-      <div class="info-section">
+      <!-- 메모 추가 폼 -->
+      <div class="call-form" style="margin-bottom:24px">
+        <h3>➕ 새 정보 추가</h3>
+        <div class="form-grid">
+          <div class="form-group full">
+            <label>제목</label>
+            <input type="text" id="prod-title" placeholder="예: 🔧 신규 브라켓 스펙" />
+          </div>
+          <div class="form-group full">
+            <label>내용</label>
+            <textarea id="prod-body" style="height:80px" placeholder="내용을 입력하세요..."></textarea>
+          </div>
+        </div>
+        <button class="btn-add" onclick="addProductNote()">+ 정보 추가</button>
+      </div>
+
+      <!-- 추가된 메모 목록 -->
+      <div id="product-notes-list"></div>
+
+      <!-- 기존 고정 정보들 -->
         <h3>📺 사이니지 영상 설정</h3>
         <div class="callout-box">
           <strong>⚠️ 영상 문제 발생 시:</strong> mp4 / bitrate 10,000 / 해상도 1080×1920
@@ -809,54 +860,173 @@ function toggleRoutine(key, el) {
 }
 
 // ===== 회의록 =====
-const meetings = [
-  { date: '2024-02-19 (월)', items: ['우리디스플레이 43" 사이니지 주문', '이동형 스탠드 클레임 건', '포도인터내셔날 견적서', '미마 콘테스트 아이디어 제출', '그레이스솔루션 65" 주문', '후니넷 발주건', '판토스 신명섭 스탠드 요청건', '에이텍씨앤 엄준용 설치일정', '부천시청 요청서류', '010-5227-5142 65UH5N 110별도'] },
-  { date: '2024-02-20 (화)', items: ['장미아 고객 전자칠판 벽걸이', '010-3929-7494 스윙 자재'] },
-  { date: '2024-02-21 (수)', items: ['(기록 없음)'] },
-  { date: '2024-02-22 (목)', items: ['베가프로젝트코리아 스케줄', '주간보고', '노트북 나스 확인 (USB 챙기기)'] },
-  { date: '2024-02-23 (금)', items: ['전자칠판 구독 주문시 사업자등록증 확인', '사업장 소재지 주소지와 설치주소 상이 확인', 'GS리테일 제품 납품시 계산서 + 거래명세표 송부'] },
+const dayKor = ['일','월','화','수','목','금','토'];
+const defaultMeetings = [
+  { id: 'm1', date: '2024-02-19', items: ['우리디스플레이 43" 사이니지 주문', '이동형 스탠드 클레임 건', '포도인터내셔날 견적서', '미마 콘테스트 아이디어 제출', '그레이스솔루션 65" 주문', '후니넷 발주건', '판토스 신명섭 스탠드 요청건', '에이텍씨앤 엄준용 설치일정', '부천시청 요청서류', '010-5227-5142 65UH5N 110별도'] },
+  { id: 'm2', date: '2024-02-20', items: ['장미아 고객 전자칠판 벽걸이', '010-3929-7494 스윙 자재'] },
+  { id: 'm3', date: '2024-02-21', items: ['(기록 없음)'] },
+  { id: 'm4', date: '2024-02-22', items: ['베가프로젝트코리아 스케줄', '주간보고', '노트북 나스 확인 (USB 챙기기)'] },
+  { id: 'm5', date: '2024-02-23', items: ['전자칠판 구독 주문시 사업자등록증 확인', '사업장 소재지 주소지와 설치주소 상이 확인', 'GS리테일 제품 납품시 계산서 + 거래명세표 송부'] },
 ];
+let meetings = JSON.parse(localStorage.getItem('meetings') || 'null') || defaultMeetings;
+function saveMeetings() { localStorage.setItem('meetings', JSON.stringify(meetings)); }
+
+function formatMeetingDate(dateStr) {
+  const d = new Date(dateStr);
+  return `${dateStr} (${dayKor[d.getDay()]})`;
+}
+
+function addMeetingDate() {
+  const date = document.getElementById('meeting-date').value;
+  const firstItem = document.getElementById('meeting-first-item').value.trim();
+  if (!date) { alert('날짜를 선택하세요!'); return; }
+  if (meetings.find(m => m.date === date)) { alert('이미 같은 날짜가 있어요!'); return; }
+  meetings.unshift({ id: 'm' + Date.now(), date, items: firstItem ? [firstItem] : [] });
+  saveMeetings();
+  document.getElementById('meeting-date').value = '';
+  document.getElementById('meeting-first-item').value = '';
+  renderMeetings();
+}
+
+function addMeetingItem(id) {
+  const input = document.getElementById('item-input-' + id);
+  const val = input.value.trim();
+  if (!val) return;
+  const m = meetings.find(m => m.id === id);
+  if (m) { m.items.push(val); saveMeetings(); input.value = ''; renderMeetings(); }
+}
+
+function deleteMeetingItem(id, idx) {
+  const m = meetings.find(m => m.id === id);
+  if (m) { m.items.splice(idx, 1); saveMeetings(); renderMeetings(); }
+}
+
+function deleteMeetingDate(id) {
+  if (!confirm('이 날짜 전체를 삭제하시겠어요?')) return;
+  meetings = meetings.filter(m => m.id !== id);
+  saveMeetings(); renderMeetings();
+}
 
 function renderMeetings() {
-  document.getElementById('meeting-list').innerHTML = meetings.map(m => `
+  const sorted = [...meetings].sort((a, b) => b.date.localeCompare(a.date));
+  document.getElementById('meeting-list').innerHTML = sorted.length === 0
+    ? '<div class="empty-state">📭 회의록이 없어요. 새 날짜를 추가해보세요!</div>'
+    : sorted.map(m => `
     <div class="meeting-card">
-      <div class="meeting-date-header">📅 ${m.date}</div>
+      <div class="meeting-date-header" style="justify-content:space-between">
+        <span>📅 ${formatMeetingDate(m.date)}</span>
+        <button onclick="deleteMeetingDate('${m.id}')" style="background:none;border:none;color:#dc2626;cursor:pointer;font-size:0.8rem;font-weight:700">날짜 삭제</button>
+      </div>
       <div class="meeting-items">
-        ${m.items.map(i => `<div class="meeting-item">${i}</div>`).join('')}
+        ${m.items.map((item, idx) => `
+          <div class="meeting-item" style="justify-content:space-between">
+            <span style="display:flex;gap:8px;align-items:flex-start"><span style="color:var(--text-muted)">·</span>${item}</span>
+            <button onclick="deleteMeetingItem('${m.id}', ${idx})" style="background:none;border:none;color:#dc2626;cursor:pointer;font-size:0.75rem;flex-shrink:0">삭제</button>
+          </div>`).join('')}
+        <div style="display:flex;gap:8px;margin-top:10px;padding-top:10px;border-top:1px dashed var(--border)">
+          <input type="text" id="item-input-${m.id}" placeholder="항목 추가..." onkeydown="if(event.key==='Enter')addMeetingItem('${m.id}')"
+            style="flex:1;border:1px solid var(--border);border-radius:7px;padding:6px 10px;font-size:0.85rem;outline:none;font-family:inherit" />
+          <button onclick="addMeetingItem('${m.id}')" class="btn-add" style="margin-top:0;padding:6px 14px;font-size:0.85rem">+ 추가</button>
+        </div>
       </div>
     </div>
   `).join('');
 }
 
 // ===== 문자 템플릿 =====
-const templates = [
-  { title: '📦 구독 주문 안내', body: `안녕하세요 고객님,\n방금 통화드렸던 LG전자 미디어메이트 류경준입니다.\n\n사업자등록증 1부와 함께 아래 항목을 기재하시어 회신 부탁드립니다.\n\n고객명:\n메일 주소:\n제품 설치 주소:\n\n주문이 접수되면 LG전자 계약센터에서 고객님께 연락을 드릴 예정입니다.\n계약센터 상담원과 통화 후 계약 진행을 부탁드립니다.` },
-  { title: '📸 포토리뷰 유도', body: `안녕하세요 고객님, LG전자 미디어메이트입니다.\n제품은 만족스럽게 받아보셨나요?\n\n현재 포토리뷰 이벤트 진행 중입니다.\n지금 리뷰를 작성해 주시면 신세계상품권 5만원권을 드립니다!\n\n참여 방법:\n• 별점 5점\n• 제품 사진 3장 이상\n• 간단한 사용 후기 작성\n\n많은 참여 부탁드립니다. 감사합니다` },
-  { title: '🎁 리뷰 이벤트 완료', body: `안녕하세요 고객님,\n리뷰이벤트 참여 감사드립니다.\n\n사은품은 모바일 카카오톡으로 14일 이내 발송 예정입니다.\n\n감사합니다.` },
-  { title: '⏳ 배송 지연 안내', body: `안녕하세요, 미디어메이트입니다.\n\n주문하신 상품이 현재 품절 상태로, 생산 중에 있습니다.\n입고 즉시 빠르게 배송해드리겠습니다.\n\n배송 지연으로 불편을 드려 죄송합니다.\n추가 문의사항이 있으시면 언제든지 편하게 연락 주세요.\n\n감사합니다.` },
-  { title: '📋 현장 견적 요청 양식', body: `■ 현장명 :\n■ 현장 주소 :\n■ 모델별 요청가 및 수량 :\n■ 납품 예정기간 :\n■ 단가 요청 사유 및 특이사항 :` },
-  { title: '✉️ 빠른 회신 감사', body: `Thank you for your prompt reply.\n고객이나 동료로부터 빠른 회신을 받았을 때 감사의 인사를 전합니다.\n\nIf you have any questions or concerns, don't hesitate to let me know.\n문의사항 있으시면 편하게 말씀해주세요.` },
+const defaultTemplates = [
+  { id: 't1', title: '📦 구독 주문 안내', body: `안녕하세요 고객님,\n방금 통화드렸던 LG전자 미디어메이트 류경준입니다.\n\n사업자등록증 1부와 함께 아래 항목을 기재하시어 회신 부탁드립니다.\n\n고객명:\n메일 주소:\n제품 설치 주소:\n\n주문이 접수되면 LG전자 계약센터에서 고객님께 연락을 드릴 예정입니다.\n계약센터 상담원과 통화 후 계약 진행을 부탁드립니다.` },
+  { id: 't2', title: '📸 포토리뷰 유도', body: `안녕하세요 고객님, LG전자 미디어메이트입니다.\n제품은 만족스럽게 받아보셨나요?\n\n현재 포토리뷰 이벤트 진행 중입니다.\n지금 리뷰를 작성해 주시면 신세계상품권 5만원권을 드립니다!\n\n참여 방법:\n• 별점 5점\n• 제품 사진 3장 이상\n• 간단한 사용 후기 작성\n\n많은 참여 부탁드립니다. 감사합니다` },
+  { id: 't3', title: '🎁 리뷰 이벤트 완료', body: `안녕하세요 고객님,\n리뷰이벤트 참여 감사드립니다.\n\n사은품은 모바일 카카오톡으로 14일 이내 발송 예정입니다.\n\n감사합니다.` },
+  { id: 't4', title: '⏳ 배송 지연 안내', body: `안녕하세요, 미디어메이트입니다.\n\n주문하신 상품이 현재 품절 상태로, 생산 중에 있습니다.\n입고 즉시 빠르게 배송해드리겠습니다.\n\n배송 지연으로 불편을 드려 죄송합니다.\n추가 문의사항이 있으시면 언제든지 편하게 연락 주세요.\n\n감사합니다.` },
+  { id: 't5', title: '📋 현장 견적 요청 양식', body: `■ 현장명 :\n■ 현장 주소 :\n■ 모델별 요청가 및 수량 :\n■ 납품 예정기간 :\n■ 단가 요청 사유 및 특이사항 :` },
+  { id: 't6', title: '✉️ 빠른 회신 감사', body: `Thank you for your prompt reply.\n고객이나 동료로부터 빠른 회신을 받았을 때 감사의 인사를 전합니다.\n\nIf you have any questions or concerns, don't hesitate to let me know.\n문의사항 있으시면 편하게 말씀해주세요.` },
 ];
+let templates = JSON.parse(localStorage.getItem('templates') || 'null') || defaultTemplates;
+function saveTemplates() { localStorage.setItem('templates', JSON.stringify(templates)); }
 
-function renderTemplates() {
-  document.getElementById('template-grid').innerHTML = templates.map((t, i) => `
-    <div class="template-card">
-      <div class="template-header">
-        ${t.title}
-        <button class="btn-copy" id="copy-btn-${i}" onclick="copyTemplate(${i})">복사</button>
-      </div>
-      <div class="template-body">${t.body}</div>
-    </div>
-  `).join('');
+function addTemplate() {
+  const title = document.getElementById('tmpl-title').value.trim();
+  const body = document.getElementById('tmpl-body').value.trim();
+  if (!title) { alert('제목을 입력하세요!'); return; }
+  if (!body) { alert('내용을 입력하세요!'); return; }
+  templates.push({ id: 't' + Date.now(), title, body });
+  saveTemplates();
+  document.getElementById('tmpl-title').value = '';
+  document.getElementById('tmpl-body').value = '';
+  renderTemplates();
 }
 
-function copyTemplate(i) {
-  navigator.clipboard.writeText(templates[i].body).then(() => {
-    const btn = document.getElementById('copy-btn-' + i);
+function deleteTemplate(id) {
+  if (!confirm('이 템플릿을 삭제하시겠어요?')) return;
+  templates = templates.filter(t => t.id !== id);
+  saveTemplates();
+  renderTemplates();
+}
+
+function copyTemplateById(id) {
+  const t = templates.find(t => t.id === id);
+  if (!t) return;
+  navigator.clipboard.writeText(t.body).then(() => {
+    const btn = document.getElementById('copy-btn-' + id);
     btn.textContent = '✓ 복사됨';
     btn.classList.add('copied');
     setTimeout(() => { btn.textContent = '복사'; btn.classList.remove('copied'); }, 2000);
   });
+}
+
+function renderTemplates() {
+  document.getElementById('template-grid').innerHTML = templates.map(t => `
+    <div class="template-card">
+      <div class="template-header">
+        <span style="flex:1">${t.title}</span>
+        <button class="btn-copy" id="copy-btn-${t.id}" onclick="copyTemplateById('${t.id}')">복사</button>
+        <button onclick="deleteTemplate('${t.id}')" style="background:none;border:none;color:#dc2626;cursor:pointer;font-size:0.8rem;font-weight:700;margin-left:6px">삭제</button>
+      </div>
+      <div class="template-body">${t.body.replace(/\n/g, '<br>')}</div>
+    </div>
+  `).join('');
+}
+
+// ===== 제품·설치 정보 메모 =====
+let productNotes = JSON.parse(localStorage.getItem('productNotes') || '[]');
+function saveProductNotes() { localStorage.setItem('productNotes', JSON.stringify(productNotes)); }
+
+function addProductNote() {
+  const title = document.getElementById('prod-title').value.trim();
+  const body = document.getElementById('prod-body').value.trim();
+  if (!title) { alert('제목을 입력하세요!'); return; }
+  productNotes.unshift({ id: 'p' + Date.now(), title, body });
+  saveProductNotes();
+  document.getElementById('prod-title').value = '';
+  document.getElementById('prod-body').value = '';
+  renderProductNotes();
+}
+
+function deleteProductNote(id) {
+  if (!confirm('삭제하시겠어요?')) return;
+  productNotes = productNotes.filter(p => p.id !== id);
+  saveProductNotes();
+  renderProductNotes();
+}
+
+function renderProductNotes() {
+  const el = document.getElementById('product-notes-list');
+  if (!el) return;
+  if (productNotes.length === 0) { el.innerHTML = ''; return; }
+  el.innerHTML = `
+    <div class="info-section">
+      <h3>📌 추가된 정보</h3>
+      ${productNotes.map(p => `
+        <div style="border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:10px;background:white">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+            <strong style="font-size:0.95rem">${p.title}</strong>
+            <button onclick="deleteProductNote('${p.id}')" style="background:none;border:none;color:#dc2626;cursor:pointer;font-size:0.8rem;font-weight:700">삭제</button>
+          </div>
+          <div style="font-size:0.88rem;color:#374151;white-space:pre-wrap;line-height:1.7">${p.body}</div>
+        </div>
+      `).join('')}
+    </div>`;
 }
 
 // 초기화
@@ -864,6 +1034,7 @@ renderCalls();
 renderRoutine();
 renderMeetings();
 renderTemplates();
+renderProductNotes();
 </script>
 </body>
 </html>
