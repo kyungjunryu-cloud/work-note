@@ -475,6 +475,19 @@
       <h2>데일리 루틴 업무</h2>
     </div>
     <div class="section-body">
+
+      <!-- 업무 추가 폼 -->
+      <div class="call-form" style="margin-bottom:24px">
+        <h3>➕ 새 루틴 업무 추가</h3>
+        <div class="form-grid">
+          <div class="form-group full">
+            <label>업무명</label>
+            <input type="text" id="routine-new-task" placeholder="예: 거래처 이메일 확인" onkeydown="if(event.key==='Enter')addRoutineTask()" />
+          </div>
+        </div>
+        <button class="btn-add" onclick="addRoutineTask()">+ 업무 추가</button>
+      </div>
+
       <table class="routine-table">
         <thead>
           <tr>
@@ -486,6 +499,7 @@
             <th id="col-thu">목</th>
             <th id="col-fri">금</th>
             <th id="col-sat">토</th>
+            <th>삭제</th>
           </tr>
         </thead>
         <tbody id="routine-tbody"></tbody>
@@ -824,14 +838,33 @@ function renderCalls() {
 }
 
 // ===== 데일리 루틴 =====
-const routineTasks = ['온라인 주문수집', '사이니지 재고 업데이트'];
 const days = ['sun','mon','tue','wed','thu','fri','sat'];
-const dayNames = { sun:'일', mon:'월', tue:'화', wed:'수', thu:'목', fri:'금', sat:'토' };
+const defaultRoutineTasks = ['온라인 주문수집', '사이니지 재고 업데이트'];
+let routineTasks = JSON.parse(localStorage.getItem('routineTasks') || 'null') || defaultRoutineTasks;
 let routineData = JSON.parse(localStorage.getItem('routine') || '{}');
 const todayDay = days[new Date().getDay()];
 
+function saveRoutineTasks() { localStorage.setItem('routineTasks', JSON.stringify(routineTasks)); }
+
+function addRoutineTask() {
+  const input = document.getElementById('routine-new-task');
+  const val = input.value.trim();
+  if (!val) { alert('업무명을 입력하세요!'); return; }
+  if (routineTasks.includes(val)) { alert('이미 같은 업무가 있어요!'); return; }
+  routineTasks.push(val);
+  saveRoutineTasks();
+  input.value = '';
+  renderRoutine();
+}
+
+function deleteRoutineTask(task) {
+  if (!confirm(`"${task}" 업무를 삭제하시겠어요?`)) return;
+  routineTasks = routineTasks.filter(t => t !== task);
+  saveRoutineTasks();
+  renderRoutine();
+}
+
 function renderRoutine() {
-  // 오늘 열 강조
   days.forEach(d => {
     const el = document.getElementById('col-' + d);
     if (el) el.style.background = d === todayDay ? '#fffbeb' : '';
@@ -849,6 +882,7 @@ function renderRoutine() {
           </div>
         </td>`;
       }).join('')}
+      <td><button onclick="deleteRoutineTask('${task}')" style="background:none;border:none;color:#dc2626;cursor:pointer;font-size:0.8rem;font-weight:700">삭제</button></td>
     </tr>
   `).join('');
 }
