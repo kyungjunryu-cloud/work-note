@@ -453,18 +453,42 @@
         <button class="btn-add" onclick="addCall()">+ 메모 추가</button>
       </div>
 
-      <!-- 필터 -->
-      <div class="call-filters">
-        <button class="filter-btn active" onclick="filterCalls('전체', this)">전체</button>
-        <button class="filter-btn" onclick="filterCalls('미처리', this)">🔴 미처리</button>
-        <button class="filter-btn" onclick="filterCalls('처리중', this)">🟠 처리중</button>
-        <button class="filter-btn" onclick="filterCalls('완료', this)">🟢 완료</button>
+      <!-- 검색 -->
+      <div style="margin-bottom:12px">
+        <input type="text" id="call-search" placeholder="🔍 발신자 이름으로 검색..." oninput="renderCalls()"
+          style="width:100%;border:1px solid var(--border);border-radius:10px;padding:10px 14px;font-size:0.9rem;outline:none;font-family:inherit" />
+      </div>
+
+      <!-- 상태 필터 -->
+      <div class="call-filters" style="margin-bottom:8px">
+        <span style="font-size:0.8rem;font-weight:700;color:var(--text-muted);align-self:center">상태:</span>
+        <button class="filter-btn active" id="status-btn-전체" onclick="setStatusFilter('전체', this)">전체</button>
+        <button class="filter-btn" id="status-btn-미처리" onclick="setStatusFilter('미처리', this)">🔴 미처리</button>
+        <button class="filter-btn" id="status-btn-처리중" onclick="setStatusFilter('처리중', this)">🟠 처리중</button>
+        <button class="filter-btn" id="status-btn-완료" onclick="setStatusFilter('완료', this)">🟢 완료</button>
+      </div>
+
+      <!-- 날짜/그룹 필터 -->
+      <div class="call-filters" style="margin-bottom:8px">
+        <span style="font-size:0.8rem;font-weight:700;color:var(--text-muted);align-self:center">기간:</span>
+        <button class="filter-btn active" id="date-btn-전체" onclick="setDateFilter('전체', this)">전체</button>
+        <button class="filter-btn" id="date-btn-오늘" onclick="setDateFilter('오늘', this)">오늘</button>
+        <button class="filter-btn" id="date-btn-이번주" onclick="setDateFilter('이번주', this)">이번 주</button>
+        <button class="filter-btn" id="date-btn-이번달" onclick="setDateFilter('이번달', this)">이번 달</button>
+        <input type="date" id="date-custom" onchange="setDateFilter('직접', null)" title="날짜 직접 선택"
+          style="border:1px solid var(--border);border-radius:20px;padding:4px 10px;font-size:0.8rem;cursor:pointer;outline:none" />
+      </div>
+
+      <!-- 그룹 보기 -->
+      <div class="call-filters" style="margin-bottom:16px">
+        <span style="font-size:0.8rem;font-weight:700;color:var(--text-muted);align-self:center">묶기:</span>
+        <button class="filter-btn active" id="group-btn-없음" onclick="setGroupBy('없음', this)">없음</button>
+        <button class="filter-btn" id="group-btn-일" onclick="setGroupBy('일', this)">날짜별</button>
+        <button class="filter-btn" id="group-btn-월" onclick="setGroupBy('월', this)">월별</button>
       </div>
 
       <!-- 메모 리스트 -->
-      <div class="call-list" id="call-list">
-        <!-- 샘플 데이터 -->
-      </div>
+      <div class="call-list" id="call-list"></div>
     </div>
   </div>
 
@@ -759,6 +783,8 @@ if (calls.length === 0) {
 }
 
 let currentFilter = '전체';
+let currentDateFilter = '전체';
+let currentGroupBy = '없음';
 
 function saveCalls() { localStorage.setItem('calls', JSON.stringify(calls)); }
 
@@ -783,10 +809,22 @@ function addCall() {
   renderCalls();
 }
 
-function filterCalls(filter, btn) {
-  currentFilter = filter;
-  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
-  btn.classList.add('active');
+function setStatusFilter(f, btn) {
+  currentFilter = f;
+  document.querySelectorAll('[id^="status-btn-"]').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  renderCalls();
+}
+function setDateFilter(f, btn) {
+  currentDateFilter = f;
+  document.querySelectorAll('[id^="date-btn-"]').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  renderCalls();
+}
+function setGroupBy(g, btn) {
+  currentGroupBy = g;
+  document.querySelectorAll('[id^="group-btn-"]').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
   renderCalls();
 }
 
@@ -811,15 +849,35 @@ function deleteCall(id) {
   saveCalls(); renderCalls();
 }
 
-function renderCalls() {
-  const list = document.getElementById('call-list');
-  const filtered = currentFilter === '전체' ? calls : calls.filter(c => c.status === currentFilter);
-  if (filtered.length === 0) {
-    list.innerHTML = '<div class="empty-state">📭 메모가 없어요. 전화 오면 바로 기록해보세요!</div>';
-    return;
-  }
+function getFilteredCalls() {
+  const today = new Date(); today.setHours(0,0,0,0);
+  const searchVal = (document.getElementById('call-search')?.value || '').trim().toLowerCase();
+
+  return calls.filter(c => {
+    // 상태 필터
+    if (currentFilter !== '전체' && c.status !== currentFilter) return false;
+    // 검색
+    if (searchVal && !c.caller.toLowerCase().includes(searchVal)) return false;
+    // 날짜 필터
+    const cDate = new Date(c.date); cDate.setHours(0,0,0,0);
+    if (currentDateFilter === '오늘') {
+      if (cDate.getTime() !== today.getTime()) return false;
+    } else if (currentDateFilter === '이번주') {
+      const startOfWeek = new Date(today); startOfWeek.setDate(today.getDate() - today.getDay());
+      if (cDate < startOfWeek) return false;
+    } else if (currentDateFilter === '이번달') {
+      if (cDate.getMonth() !== today.getMonth() || cDate.getFullYear() !== today.getFullYear()) return false;
+    } else if (currentDateFilter === '직접') {
+      const custom = document.getElementById('date-custom')?.value;
+      if (custom && c.date !== custom) return false;
+    }
+    return true;
+  });
+}
+
+function callCardHtml(c) {
   const statusFlow = { '미처리': '처리중', '처리중': '완료', '완료': '미처리' };
-  list.innerHTML = filtered.map(c => `
+  return `
     <div class="call-card">
       <div class="call-status-dot dot-${c.status}"></div>
       <div class="call-info">
@@ -833,8 +891,49 @@ function renderCalls() {
         <button class="btn-status" onclick="changeStatus(${c.id}, '${statusFlow[c.status]}')">→ ${statusFlow[c.status]}</button>
         <button class="btn-delete" onclick="deleteCall(${c.id})">삭제</button>
       </div>
-    </div>
-  `).join('');
+    </div>`;
+}
+
+function renderCalls() {
+  const list = document.getElementById('call-list');
+  const filtered = getFilteredCalls();
+
+  if (filtered.length === 0) {
+    list.innerHTML = '<div class="empty-state">📭 해당하는 메모가 없어요!</div>';
+    return;
+  }
+
+  if (currentGroupBy === '없음') {
+    list.innerHTML = filtered.map(callCardHtml).join('');
+    return;
+  }
+
+  // 그룹핑
+  const groups = {};
+  filtered.forEach(c => {
+    const key = currentGroupBy === '월'
+      ? c.date.slice(0, 7) // YYYY-MM
+      : c.date;             // YYYY-MM-DD
+    if (!groups[key]) groups[key] = [];
+    groups[key].push(c);
+  });
+
+  const dayKorArr = ['일','월','화','수','목','금','토'];
+  list.innerHTML = Object.keys(groups).sort((a,b) => b.localeCompare(a)).map(key => {
+    const label = currentGroupBy === '월'
+      ? `${key.slice(0,4)}년 ${parseInt(key.slice(5))}월 (${groups[key].length}건)`
+      : (() => {
+          const d = new Date(key);
+          return `${key} (${dayKorArr[d.getDay()]}) — ${groups[key].length}건`;
+        })();
+    return `
+      <div style="margin-bottom:16px">
+        <div style="font-size:0.82rem;font-weight:800;color:var(--text-muted);padding:6px 0;border-bottom:2px solid var(--border);margin-bottom:8px">
+          📅 ${label}
+        </div>
+        ${groups[key].map(callCardHtml).join('')}
+      </div>`;
+  }).join('');
 }
 
 // ===== 데일리 루틴 =====
