@@ -762,8 +762,7 @@
 
 </div>
 
-<script>
-// ===== 탭 전환 =====
+<script type="module">
 function switchTab(tab) {
   document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
@@ -771,29 +770,41 @@ function switchTab(tab) {
   event.target.classList.add('active');
 }
 
-// ===== 전화 메모 데이터 =====
-let calls = JSON.parse(localStorage.getItem('calls') || '[]');
-// 샘플 데이터 (처음 한 번만)
-if (calls.length === 0) {
-  calls = [
-    { id: 1, caller: '우리디스플레이', phone: '', content: '43" 사이니지 주문', todo: '견적서 발송', deadline: '', status: '완료', date: '2024-02-19' },
-    { id: 2, caller: '판토스 신명섭', phone: '', content: '스탠드 요청', todo: '스탠드 재고 확인 후 회신', deadline: '', status: '미처리', date: '2024-02-19' },
-    { id: 3, caller: '에이텍씨앤 엄준용', phone: '', content: '설치 일정 조율', todo: '설치팀과 날짜 확정', deadline: '', status: '처리중', date: '2024-02-19' },
-  ];
-}
+// ===== Firebase 초기화 =====
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getFirestore, collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
+const firebaseConfig = {
+  apiKey: "AIzaSyC3Ukq5d1VIEMX9-4umD82HUc3BNwdVa6s",
+  authDomain: "mediamate-worknote.firebaseapp.com",
+  projectId: "mediamate-worknote",
+  storageBucket: "mediamate-worknote.firebasestorage.app",
+  messagingSenderId: "322197637957",
+  appId: "1:322197637957:web:d498f8908a2e2499e1cc2c"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+const callsRef = collection(db, 'calls');
+
+// ===== 전화 메모 데이터 =====
+let calls = [];
 let currentFilter = '전체';
 let currentDateFilter = '전체';
 let currentGroupBy = '없음';
 
-function saveCalls() { localStorage.setItem('calls', JSON.stringify(calls)); }
+// Firestore 실시간 리스닝 (PC/모바일 자동 동기화)
+onSnapshot(query(callsRef, orderBy('date', 'desc')), (snapshot) => {
+  calls = snapshot.docs.map(d => ({ ...d.data(), _docId: d.id }));
+  renderCalls();
+});
 
-function addCall() {
+async function addCall() {
   const caller = document.getElementById('in-caller').value.trim();
   if (!caller) { alert('발신자를 입력하세요!'); return; }
   const now = new Date();
   const dateStr = now.toISOString().split('T')[0];
-  calls.unshift({
+  const newCall = {
     id: Date.now(),
     caller,
     phone: document.getElementById('in-phone').value.trim(),
@@ -802,11 +813,10 @@ function addCall() {
     deadline: document.getElementById('in-deadline').value,
     status: document.getElementById('in-status').value,
     date: dateStr,
-  });
-  saveCalls();
+  };
+  await addDoc(callsRef, newCall);
   ['in-caller','in-phone','in-content','in-todo','in-deadline'].forEach(id => document.getElementById(id).value = '');
   document.getElementById('in-status').value = '미처리';
-  renderCalls();
 }
 
 function setStatusFilter(f, btn) {
@@ -839,25 +849,20 @@ function getDeadlineBadge(deadline) {
   return `<span class="call-deadline-badge badge-ok">D-${diff}</span>`;
 }
 
-function changeStatus(id, next) {
-  const c = calls.find(c => c.id === id);
-  if (c) { c.status = next; saveCalls(); renderCalls(); }
+async function changeStatus(docId, next) {
+  const c = calls.find(c => c._docId === docId);
+  if (c) await updateDoc(doc(db, 'calls', docId), { status: next });
 }
-function deleteCall(id) {
-  calls = calls.filter(c => c.id !== id);
-  saveCalls(); renderCalls();
+async function deleteCall(docId) {
+  await deleteDoc(doc(db, 'calls', docId));
 }
 
 function getFilteredCalls() {
   const today = new Date(); today.setHours(0,0,0,0);
   const searchVal = (document.getElementById('call-search')?.value || '').trim().toLowerCase();
-
   return calls.filter(c => {
-    // 상태 필터
     if (currentFilter !== '전체' && c.status !== currentFilter) return false;
-    // 검색
     if (searchVal && !c.caller.toLowerCase().includes(searchVal)) return false;
-    // 날짜 필터
     const cDate = new Date(c.date); cDate.setHours(0,0,0,0);
     if (currentDateFilter === '오늘') {
       if (cDate.getTime() !== today.getTime()) return false;
@@ -877,8 +882,9 @@ function getFilteredCalls() {
 function callCardHtml(c) {
   const statusFlow = { '미처리': '처리중', '처리중': '완료', '완료': '미처리' };
   const nextStatus = statusFlow[c.status] || '미처리';
+  const docId = c._docId;
   return `
-    <div class="call-card" id="card-${c.id}">
+    <div class="call-card" id="card-${docId}">
       <div class="call-status-dot dot-${c.status}"></div>
       <div class="call-info">
         <div class="call-caller">${c.caller}${c.phone ? ` <span style="color:var(--text-muted);font-weight:400;font-size:0.85rem">${c.phone}</span>` : ''}</div>
@@ -888,44 +894,44 @@ function callCardHtml(c) {
       </div>
       <div class="call-actions">
         ${getDeadlineBadge(c.deadline)}
-        <button class="btn-status" onclick="changeStatus(${c.id}, '${nextStatus}')">→ ${nextStatus}</button>
-        <button class="btn-status" onclick="editCall(${c.id})" style="color:var(--blue);border-color:var(--blue)">✏️ 편집</button>
-        <button class="btn-delete" onclick="deleteCall(${c.id})">삭제</button>
+        <button class="btn-status" onclick="changeStatus('${docId}', '${nextStatus}')">→ ${nextStatus}</button>
+        <button class="btn-status" onclick="editCall('${docId}')" style="color:var(--blue);border-color:var(--blue)">✏️ 편집</button>
+        <button class="btn-delete" onclick="deleteCall('${docId}')">삭제</button>
       </div>
     </div>`;
 }
 
-function editCall(id) {
-  const c = calls.find(c => c.id === id);
+function editCall(docId) {
+  const c = calls.find(c => c._docId === docId);
   if (!c) return;
-  const card = document.getElementById('card-' + id);
+  const card = document.getElementById('card-' + docId);
   card.innerHTML = `
     <div style="width:100%">
       <div style="font-size:0.8rem;font-weight:700;color:var(--blue);margin-bottom:10px">✏️ 편집 중</div>
       <div class="form-grid" style="margin-bottom:10px">
         <div class="form-group">
           <label>발신자 / 업체명</label>
-          <input type="text" id="edit-caller-${id}" value="${c.caller}" />
+          <input type="text" id="edit-caller-${docId}" value="${c.caller}" />
         </div>
         <div class="form-group">
           <label>연락처</label>
-          <input type="text" id="edit-phone-${id}" value="${c.phone || ''}" />
+          <input type="text" id="edit-phone-${docId}" value="${c.phone || ''}" />
         </div>
         <div class="form-group full">
           <label>통화 내용</label>
-          <input type="text" id="edit-content-${id}" value="${c.content || ''}" />
+          <input type="text" id="edit-content-${docId}" value="${c.content || ''}" />
         </div>
         <div class="form-group full">
           <label>할 일</label>
-          <input type="text" id="edit-todo-${id}" value="${c.todo || ''}" />
+          <input type="text" id="edit-todo-${docId}" value="${c.todo || ''}" />
         </div>
         <div class="form-group">
           <label>기한</label>
-          <input type="date" id="edit-deadline-${id}" value="${c.deadline || ''}" />
+          <input type="date" id="edit-deadline-${docId}" value="${c.deadline || ''}" />
         </div>
         <div class="form-group">
           <label>상태</label>
-          <select id="edit-status-${id}">
+          <select id="edit-status-${docId}">
             <option value="미처리" ${c.status==='미처리'?'selected':''}>🔴 미처리</option>
             <option value="처리중" ${c.status==='처리중'?'selected':''}>🟠 처리중</option>
             <option value="완료"   ${c.status==='완료'?'selected':''}>🟢 완료</option>
@@ -933,27 +939,26 @@ function editCall(id) {
         </div>
       </div>
       <div style="display:flex;gap:8px">
-        <button class="btn-add" onclick="saveEdit(${id})" style="margin-top:0;padding:8px 20px">💾 저장</button>
+        <button class="btn-add" onclick="saveEdit('${docId}')" style="margin-top:0;padding:8px 20px">💾 저장</button>
         <button onclick="renderCalls()" style="padding:8px 16px;border:1px solid var(--border);border-radius:8px;background:white;cursor:pointer;font-size:0.88rem">취소</button>
       </div>
     </div>`;
 }
 
-function saveEdit(id) {
-  const c = calls.find(c => c.id === id);
+async function saveEdit(docId) {
+  const c = calls.find(c => c._docId === docId);
   if (!c) return;
-  c.caller   = document.getElementById(`edit-caller-${id}`).value.trim() || c.caller;
-  c.phone    = document.getElementById(`edit-phone-${id}`).value.trim();
-  c.content  = document.getElementById(`edit-content-${id}`).value.trim();
-  c.todo     = document.getElementById(`edit-todo-${id}`).value.trim();
-  c.deadline = document.getElementById(`edit-deadline-${id}`).value;
-  c.status   = document.getElementById(`edit-status-${id}`).value;
-  saveCalls();
-  renderCalls();
+  await updateDoc(doc(db, 'calls', docId), {
+    caller:   document.getElementById(`edit-caller-${docId}`).value.trim() || c.caller,
+    phone:    document.getElementById(`edit-phone-${docId}`).value.trim(),
+    content:  document.getElementById(`edit-content-${docId}`).value.trim(),
+    todo:     document.getElementById(`edit-todo-${docId}`).value.trim(),
+    deadline: document.getElementById(`edit-deadline-${docId}`).value,
+    status:   document.getElementById(`edit-status-${docId}`).value,
+  });
 }
 
 function sortCalls(arr) {
-  // 미처리/처리중 먼저, 완료는 맨 아래
   return [...arr].sort((a, b) => {
     const order = { '미처리': 0, '처리중': 1, '완료': 2 };
     return (order[a.status] ?? 0) - (order[b.status] ?? 0);
@@ -1225,11 +1230,34 @@ function renderProductNotes() {
 }
 
 // 초기화
-renderCalls();
 renderRoutine();
 renderMeetings();
 renderTemplates();
 renderProductNotes();
+
+// module 스코프 함수들을 전역으로 등록 (onclick에서 사용하기 위해)
+window.switchTab = switchTab;
+window.addCall = addCall;
+window.changeStatus = changeStatus;
+window.deleteCall = deleteCall;
+window.editCall = editCall;
+window.saveEdit = saveEdit;
+window.setStatusFilter = setStatusFilter;
+window.setDateFilter = setDateFilter;
+window.setGroupBy = setGroupBy;
+window.renderCalls = renderCalls;
+window.addRoutineTask = addRoutineTask;
+window.deleteRoutineTask = deleteRoutineTask;
+window.toggleRoutine = toggleRoutine;
+window.addMeetingDate = addMeetingDate;
+window.addMeetingItem = addMeetingItem;
+window.deleteMeetingItem = deleteMeetingItem;
+window.deleteMeetingDate = deleteMeetingDate;
+window.addTemplate = addTemplate;
+window.deleteTemplate = deleteTemplate;
+window.copyTemplateById = copyTemplateById;
+window.addProductNote = addProductNote;
+window.deleteProductNote = deleteProductNote;
 </script>
 </body>
 </html>
