@@ -445,7 +445,6 @@
             <label>상태</label>
             <select id="in-status">
               <option value="미처리">🔴 미처리</option>
-              <option value="처리중">🟠 처리중</option>
               <option value="완료">🟢 완료</option>
             </select>
           </div>
@@ -464,7 +463,6 @@
         <span style="font-size:0.8rem;font-weight:700;color:var(--text-muted);align-self:center">상태:</span>
         <button class="filter-btn active" id="status-btn-전체" onclick="setStatusFilter('전체', this)">전체</button>
         <button class="filter-btn" id="status-btn-미처리" onclick="setStatusFilter('미처리', this)">🔴 미처리</button>
-        <button class="filter-btn" id="status-btn-처리중" onclick="setStatusFilter('처리중', this)">🟠 처리중</button>
         <button class="filter-btn" id="status-btn-완료" onclick="setStatusFilter('완료', this)">🟢 완료</button>
       </div>
 
@@ -794,7 +792,7 @@ let currentDateFilter = '전체';
 let currentGroupBy = '없음';
 
 // Firestore 실시간 리스닝 (PC/모바일 자동 동기화)
-onSnapshot(query(callsRef, orderBy('date', 'desc')), (snapshot) => {
+onSnapshot(query(callsRef, orderBy('id', 'asc')), (snapshot) => {
   calls = snapshot.docs.map(d => ({ ...d.data(), _docId: d.id }));
   renderCalls();
 });
@@ -880,7 +878,7 @@ function getFilteredCalls() {
 }
 
 function callCardHtml(c) {
-  const statusFlow = { '미처리': '처리중', '처리중': '완료', '완료': '미처리' };
+  const statusFlow = { '미처리': '완료', '완료': '미처리' };
   const nextStatus = statusFlow[c.status] || '미처리';
   const docId = c._docId;
   return `
@@ -933,7 +931,6 @@ function editCall(docId) {
           <label>상태</label>
           <select id="edit-status-${docId}">
             <option value="미처리" ${c.status==='미처리'?'selected':''}>🔴 미처리</option>
-            <option value="처리중" ${c.status==='처리중'?'selected':''}>🟠 처리중</option>
             <option value="완료"   ${c.status==='완료'?'selected':''}>🟢 완료</option>
           </select>
         </div>
@@ -959,9 +956,12 @@ async function saveEdit(docId) {
 }
 
 function sortCalls(arr) {
+  // 추가 순서대로 (id 오름차순), 완료만 맨 아래
   return [...arr].sort((a, b) => {
-    const order = { '미처리': 0, '처리중': 1, '완료': 2 };
-    return (order[a.status] ?? 0) - (order[b.status] ?? 0);
+    const orderA = a.status === '완료' ? 1 : 0;
+    const orderB = b.status === '완료' ? 1 : 0;
+    if (orderA !== orderB) return orderA - orderB;
+    return a.id - b.id; // 같은 상태면 추가 순서대로
   });
 }
 
