@@ -956,12 +956,12 @@ async function saveEdit(docId) {
 }
 
 function sortCalls(arr) {
-  // 추가 순서대로 (id 오름차순), 완료만 맨 아래
+  // 최신 추가 순서대로 위로, 완료만 맨 아래
   return [...arr].sort((a, b) => {
     const orderA = a.status === '완료' ? 1 : 0;
     const orderB = b.status === '완료' ? 1 : 0;
     if (orderA !== orderB) return orderA - orderB;
-    return a.id - b.id; // 같은 상태면 추가 순서대로
+    return b.id - a.id; // 최신이 위로
   });
 }
 
